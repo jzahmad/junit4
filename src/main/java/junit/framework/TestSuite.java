@@ -1,7 +1,5 @@
 package junit.framework;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -10,7 +8,6 @@ import java.util.List;
 import java.util.Vector;
 
 import org.junit.internal.MethodSorter;
-import org.junit.internal.Throwables;
 
 /**
  * A <code>TestSuite</code> is a <code>Composite</code> of Tests.
@@ -40,80 +37,15 @@ import org.junit.internal.Throwables;
  *
  * @see Test
  */
+
 public class TestSuite implements Test {
 
-    /**
-     * ...as the moon sets over the early morning Merlin, Oregon
-     * mountains, our intrepid adventurers type...
-     */
-    static public Test createTest(Class<?> theClass, String name) {
-        Constructor<?> constructor;
-        try {
-            constructor = getTestConstructor(theClass);
-        } catch (NoSuchMethodException e) {
-            return warning("Class " + theClass.getName() + " has no public constructor TestCase(String name) or TestCase()");
-        }
-        Object test;
-        try {
-            if (constructor.getParameterTypes().length == 0) {
-                test = constructor.newInstance(new Object[0]);
-                if (test instanceof TestCase) {
-                    ((TestCase) test).setName(name);
-                }
-            } else {
-                test = constructor.newInstance(new Object[]{name});
-            }
-        } catch (InstantiationException e) {
-            return (warning("Cannot instantiate test case: " + name + " (" + Throwables.getStacktrace(e) + ")"));
-        } catch (InvocationTargetException e) {
-            return (warning("Exception in constructor: " + name + " (" + Throwables.getStacktrace(e.getTargetException()) + ")"));
-        } catch (IllegalAccessException e) {
-            return (warning("Cannot access test case: " + name + " (" + Throwables.getStacktrace(e) + ")"));
-        }
-        return (Test) test;
-    }
-
-    /**
-     * Gets a constructor which takes a single String as
-     * its argument or a no arg constructor.
-     */
-    public static Constructor<?> getTestConstructor(Class<?> theClass) throws NoSuchMethodException {
-        try {
-            return theClass.getConstructor(String.class);
-        } catch (NoSuchMethodException e) {
-            // fall through
-        }
-        return theClass.getConstructor();
-    }
-
-    /**
-     * Returns a test which will fail and log a warning message.
-     */
-    public static Test warning(final String message) {
-        return new TestCase("warning") {
-            @Override
-            protected void runTest() {
-                fail(message);
-            }
-        };
-    }
-
     private String fName;
+    private Vector<Test> fTests = new Vector<>(10);
 
-    private Vector<Test> fTests = new Vector<Test>(10); // Cannot convert this to List because it is used directly by some test runners
-
-    /**
-     * Constructs an empty TestSuite.
-     */
     public TestSuite() {
     }
 
-    /**
-     * Constructs a TestSuite from the given class. Adds all the methods
-     * starting with "test" as test cases to the suite.
-     * Parts of this method were written at 2337 meters in the Hueffihuette,
-     * Kanton Uri
-     */
     public TestSuite(final Class<?> theClass) {
         addTestsFromTestCase(theClass);
     }
@@ -121,14 +53,14 @@ public class TestSuite implements Test {
     private void addTestsFromTestCase(final Class<?> theClass) {
         fName = theClass.getName();
         try {
-            getTestConstructor(theClass); // Avoid generating multiple error messages
+            TestSuite2.getTestConstructor(theClass); // Avoid generating multiple error messages
         } catch (NoSuchMethodException e) {
-            addTest(warning("Class " + theClass.getName() + " has no public constructor TestCase(String name) or TestCase()"));
+            addTest(TestSuite2.warning("Class " + theClass.getName() + " has no public constructor TestCase(String name) or TestCase()"));
             return;
         }
 
         if (!Modifier.isPublic(theClass.getModifiers())) {
-            addTest(warning("Class " + theClass.getName() + " is not public"));
+            addTest(TestSuite2.warning("Class " + theClass.getName() + " is not public"));
             return;
         }
 
@@ -141,73 +73,27 @@ public class TestSuite implements Test {
             superClass = superClass.getSuperclass();
         }
         if (fTests.size() == 0) {
-            addTest(warning("No tests found in " + theClass.getName()));
+            addTest(TestSuite2.warning("No tests found in " + theClass.getName()));
         }
     }
 
-    /**
-     * Constructs a TestSuite from the given class with the given name.
-     *
-     * @see TestSuite#TestSuite(Class)
-     */
     public TestSuite(Class<? extends TestCase> theClass, String name) {
         this(theClass);
         setName(name);
     }
 
-    /**
-     * Constructs an empty TestSuite.
-     */
     public TestSuite(String name) {
         setName(name);
     }
 
-    /**
-     * Constructs a TestSuite from the given array of classes.
-     *
-     * @param classes {@link TestCase}s
-     */
-    public TestSuite(Class<?>... classes) {
-        for (Class<?> each : classes) {
-            addTest(testCaseForClass(each));
-        }
-    }
-
-    private Test testCaseForClass(Class<?> each) {
-        if (TestCase.class.isAssignableFrom(each)) {
-            return new TestSuite(each.asSubclass(TestCase.class));
-        } else {
-            return warning(each.getCanonicalName() + " does not extend TestCase");
-        }
-    }
-
-    /**
-     * Constructs a TestSuite from the given array of classes with the given name.
-     *
-     * @see TestSuite#TestSuite(Class[])
-     */
-    public TestSuite(Class<? extends TestCase>[] classes, String name) {
-        this(classes);
-        setName(name);
-    }
-
-    /**
-     * Adds a test to the suite.
-     */
     public void addTest(Test test) {
         fTests.add(test);
     }
 
-    /**
-     * Adds the tests from the given class to the suite.
-     */
     public void addTestSuite(Class<? extends TestCase> testClass) {
         addTest(new TestSuite(testClass));
     }
 
-    /**
-     * Counts the number of test cases that will be run by this test.
-     */
     public int countTestCases() {
         int count = 0;
         for (Test each : fTests) {
@@ -216,18 +102,10 @@ public class TestSuite implements Test {
         return count;
     }
 
-    /**
-     * Returns the name of the suite. Not all
-     * test suites have a name and this method
-     * can return null.
-     */
     public String getName() {
         return fName;
     }
 
-    /**
-     * Runs the tests and collects their result in a TestResult.
-     */
     public void run(TestResult result) {
         for (Test each : fTests) {
             if (result.shouldStop()) {
@@ -241,38 +119,22 @@ public class TestSuite implements Test {
         test.run(result);
     }
 
-    /**
-     * Sets the name of the suite.
-     *
-     * @param name the name to set
-     */
     public void setName(String name) {
         fName = name;
     }
 
-    /**
-     * Returns the test at the given index.
-     */
     public Test testAt(int index) {
         return fTests.get(index);
     }
 
-    /**
-     * Returns the number of tests in this suite.
-     */
     public int testCount() {
         return fTests.size();
     }
 
-    /**
-     * Returns the tests as an enumeration.
-     */
     public Enumeration<Test> tests() {
         return fTests.elements();
     }
 
-    /**
-     */
     @Override
     public String toString() {
         if (getName() != null) {
@@ -288,12 +150,12 @@ public class TestSuite implements Test {
         }
         if (!isPublicTestMethod(m)) {
             if (isTestMethod(m)) {
-                addTest(warning("Test method isn't public: " + m.getName() + "(" + theClass.getCanonicalName() + ")"));
+                addTest(TestSuite2.warning("Test method isn't public: " + m.getName() + "(" + theClass.getCanonicalName() + ")"));
             }
             return;
         }
         names.add(name);
-        addTest(createTest(theClass, name));
+        addTest(TestSuite2.createTest(theClass, name));
     }
 
     private boolean isPublicTestMethod(Method m) {
