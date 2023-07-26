@@ -3,10 +3,7 @@ package junit.textui;
 
 import java.io.PrintStream;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestResult;
-import junit.framework.TestSuite;
+import junit.framework.*;
 import junit.runner.BaseTestRunner;
 import junit.runner.Version;
 
@@ -188,7 +185,7 @@ public class TestRunner extends BaseTestRunner {
 
     protected TestResult runSingleMethod(String testCase, String method, boolean wait) throws Exception {
         Class<? extends TestCase> testClass = loadSuiteClass(testCase).asSubclass(TestCase.class);
-        Test test = TestSuite.createTest(testClass, method);
+        Test test = TestSuite2.createTest(testClass, method);
         return doRun(test, wait);
     }
 
