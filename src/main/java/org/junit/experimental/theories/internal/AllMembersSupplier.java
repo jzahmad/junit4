@@ -80,8 +80,11 @@ public class AllMembersSupplier extends ParameterSupplier {
             if ((returnType.isArray() && sig.canPotentiallyAcceptType(returnType.getComponentType())) ||
                     Iterable.class.isAssignableFrom(returnType)) {
                 try {
-                    addDataPointsValues(returnType, sig, dataPointsMethod.getName(), list, 
-                            dataPointsMethod.invokeExplosively(null));
+                    DataPointsValues dataPointsValues = new DataPointsValues
+                            (returnType, sig, dataPointsMethod.getName(), list,
+                                    dataPointsMethod.invokeExplosively(null));
+                    addDataPointsValues(dataPointsValues);
+
                 } catch (Throwable throwable) {
                     DataPoints annotation = dataPointsMethod.getAnnotation(DataPoints.class);
                     if (annotation != null && isAssignableToAnyOf(annotation.ignoredExceptions(), throwable)) {
@@ -105,7 +108,9 @@ public class AllMembersSupplier extends ParameterSupplier {
     private void addMultiPointFields(ParameterSignature sig, List<PotentialAssignment> list) {
         for (final Field field : getDataPointsFields(sig)) {
             Class<?> type = field.getType();
-            addDataPointsValues(type, sig, field.getName(), list, getStaticFieldValue(field));
+            DataPointsValues dataPointsValues = new DataPointsValues
+                    (type, sig, field.getName(), list, getStaticFieldValue(field));
+            addDataPointsValues(dataPointsValues);
         }
     }
 
@@ -118,16 +123,21 @@ public class AllMembersSupplier extends ParameterSupplier {
             }
         }
     }
-    
-    private void addDataPointsValues(Class<?> type, ParameterSignature sig, String name, 
-            List<PotentialAssignment> list, Object value) {
+
+    private void addDataPointsValues(DataPointsValues dataPointsValues) {
+        Class<?> type = dataPointsValues.getType();
+        ParameterSignature sig = dataPointsValues.getSig();
+        String name = dataPointsValues.getName();
+        List<PotentialAssignment> list = dataPointsValues.getList();
+        Object value = dataPointsValues.getValue();
+
         if (type.isArray()) {
             addArrayValues(sig, name, list, value);
-        }
-        else if (Iterable.class.isAssignableFrom(type)) {
+        } else if (Iterable.class.isAssignableFrom(type)) {
             addIterableValues(sig, name, list, (Iterable<?>) value);
         }
     }
+
 
     private void addArrayValues(ParameterSignature sig, String name, List<PotentialAssignment> list, Object array) {
         for (int i = 0; i < Array.getLength(array); i++) {
