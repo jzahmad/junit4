@@ -32,6 +32,7 @@ import org.junit.runners.model.InitializationError;
 public class MaxCore {
     private static final String MALFORMED_JUNIT_3_TEST_CLASS_PREFIX = "malformed JUnit 3 test class: ";
 
+    private static final String MALFORMED_PREFIX = "malformed_junit3_";
     /**
      * Create a new MaxCore from a serialized file stored at storedResults
      *
@@ -124,7 +125,7 @@ public class MaxCore {
         if (each.toString().equals("TestSuite with 0 tests")) {
             return Suite.emptySuite();
         }
-        if (each.toString().startsWith(MALFORMED_JUNIT_3_TEST_CLASS_PREFIX)) {
+        if (each.toString().startsWith(MALFORMED_PREFIX)) {
             // This is cheating, because it runs the whole class
             // to get the warning for this method, but we can't do better,
             // because JUnit 3.8's
