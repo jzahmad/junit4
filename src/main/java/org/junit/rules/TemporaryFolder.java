@@ -185,44 +185,45 @@ public class TemporaryFolder extends ExternalResource {
      * {@code "parent"} directory.
      */
     public File newFolder(String... paths) throws IOException {
-        if (paths.length == 0) {
-            throw new IllegalArgumentException("must pass at least one path");
+        validatePaths(paths);
+
+        File root = getRoot();
+        File relativePath = null;
+
+        for (String path : paths) {
+            relativePath = appendPath(relativePath, path);
+            File folder = new File(root, relativePath.getPath());
+
+            if (!createFolder(folder)) {
+                throw new IOException("Could not create a folder with the path \'" + relativePath.getPath() + "\'");
+            }
         }
 
-        /*
-         * Before checking if the paths are absolute paths, check if create() was ever called,
-         * and if it wasn't, throw IllegalStateException.
-         */
-        File root = getRoot();
+        return new File(root, relativePath.getPath());
+    }
+
+    private void validatePaths(String... paths) {
+        if (paths.length == 0) {
+            throw new IllegalArgumentException("Must pass at least one path");
+        }
+
         for (String path : paths) {
             if (new File(path).isAbsolute()) {
-                throw new IOException("folder path \'" + path + "\' is not a relative path");
+                throw new IllegalArgumentException("Folder path \'" + path + "\' is not a relative path");
             }
         }
+    }
 
-        File relativePath = null;
-        File file = root;
-        boolean lastMkdirsCallSuccessful = true;
-        for (String path : paths) {
-            relativePath = new File(relativePath, path);
-            file = new File(root, relativePath.getPath());
+    private File appendPath(File parent, String childPath) {
+        if (parent == null) {
+            return new File(childPath);
+        } else {
+            return new File(parent, childPath);
+        }
+    }
 
-            lastMkdirsCallSuccessful = file.mkdirs();
-            if (!lastMkdirsCallSuccessful && !file.isDirectory()) {
-                if (file.exists()) {
-                    throw new IOException(
-                            "a file with the path \'" + relativePath.getPath() + "\' exists");
-                } else {
-                    throw new IOException(
-                            "could not create a folder with the path \'" + relativePath.getPath() + "\'");
-                }
-            }
-        }
-        if (!lastMkdirsCallSuccessful) {
-            throw new IOException(
-                    "a folder with the path \'" + relativePath.getPath() + "\' already exists");
-        }
-        return file;
+    private boolean createFolder(File folder) {
+        return folder.mkdirs() || folder.isDirectory();
     }
 
     /**
