@@ -102,29 +102,36 @@ public class MethodRoadie {
             runAfters();
         }
     }
-
     protected void runTestMethod() {
         try {
             testMethod.invoke(test);
-            if (testMethod.expectsException()) {
-                addFailure(new AssertionError("Expected exception: " + testMethod.getExpectedException().getName()));
-            }
+            checkForExpectedException();
         } catch (InvocationTargetException e) {
-            Throwable actual = e.getTargetException();
-            if (actual instanceof AssumptionViolatedException) {
-                return;
-            } else if (!testMethod.expectsException()) {
-                addFailure(actual);
-            } else if (testMethod.isUnexpected(actual)) {
-                String message = "Unexpected exception, expected<" + testMethod.getExpectedException().getName() + "> but was<"
-                        + actual.getClass().getName() + ">";
-                addFailure(new Exception(message, actual));
-            }
+            handleInvocationTargetException(e);
         } catch (Throwable e) {
             addFailure(e);
         }
     }
 
+    private void checkForExpectedException() {
+        if (testMethod.expectsException()) {
+            addFailure(new AssertionError("Expected exception: " + testMethod.getExpectedException().getName()));
+        }
+    }
+
+    private void handleInvocationTargetException(InvocationTargetException e) {
+        Throwable actual = e.getTargetException();
+        if (actual instanceof AssumptionViolatedException) {
+            return;
+        } else if (!testMethod.expectsException()) {
+            addFailure(actual);
+        } else if (testMethod.isUnexpected(actual)) {
+            String message = "Unexpected exception, expected<" + testMethod.getExpectedException().getName() + "> but was<"
+                    + actual.getClass().getName() + ">";
+            addFailure(new Exception(message, actual));
+        }
+    }
+    
     private void runBefores() throws FailedBefore {
         try {
             try {
